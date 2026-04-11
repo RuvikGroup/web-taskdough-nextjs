@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+  }
+
+  /* Dark mode (default) */
+  html.dark body {
+    @apply bg-background text-on-surface;
+  }
+
+  /* Light mode */
+  html:not(.dark) body {
+    background-color: #fafaf9;
+    color: #0f172a;
+  }
+}
+
+@layer utilities {
+  .neon-glow {
+    box-shadow: 0 0 40px rgba(254, 94, 30, 0.25);
+  }
+
+  .kinetic-gradient {
+    background: linear-gradient(135deg, #fe5e1e 0%, #ff7948 100%);
+  }
+
+  .text-glow {
+    text-shadow: 0 0 15px rgba(254, 94, 30, 0.6);
+  }
+
+  .neon-section {
+    background-color: #fe5e1e;
+    box-shadow: 0 0 60px rgba(254, 94, 30, 0.4);
+  }
+
+  .pixel-border {
+    box-shadow:
+      0 -4px 0 0 #fe5e1e,
+      0 4px 0 0 #fe5e1e,
+      -4px 0 0 0 #fe5e1e,
+      4px 0 0 0 #fe5e1e;
+  }
+
+  .premium-shadow {
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+  }
+
+  .light-gradient-text {
+    background: linear-gradient(135deg, #e2725b 0%, #ff8c75 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
