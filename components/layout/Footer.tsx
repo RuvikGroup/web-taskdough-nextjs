@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { MessageSquare, Briefcase } from "lucide-react";
 
 const footerLinks = [
-  { label: "Privacy Policy", href: "#" },
-  { label: "Terms of Service", href: "#" },
-  { label: "Security", href: "#" },
-  { label: "Status", href: "#" },
+  { label: "Privacy Policy", href: "/privacy" },
+  { label: "Terms of Service", href: "/terms" },
+  { label: "Security", href: "/security" },
+  { label: "Status", href: "/status" },
 ];
 
 export function Footer() {
@@ -17,13 +18,13 @@ export function Footer() {
 
       <div className="flex flex-wrap justify-center gap-6">
         {footerLinks.map((link) => (
-          <a
+          <Link
             key={link.label}
             href={link.href}
             className="text-xs text-[#adaaaa] hover:text-[#ff5f1f] transition-colors"
           >
             {link.label}
-          </a>
+          </Link>
         ))}
       </div>
 
