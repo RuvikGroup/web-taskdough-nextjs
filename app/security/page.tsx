@@ -70,7 +70,7 @@ export default function SecurityPage() {
               Security
             </h1>
             <p className="text-[#adaaaa] text-lg leading-relaxed">
-              Your money and data are serious business. Here's exactly how we protect them —
+              Your money and data are serious business. Here&apos;s exactly how we protect them —
               no vague promises, just specifics.
             </p>
           </div>

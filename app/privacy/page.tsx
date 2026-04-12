@@ -100,7 +100,7 @@ export default function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="text-[#adaaaa] text-lg leading-relaxed">
-              We believe in radical transparency. Here's exactly what data we collect, why we
+              We believe in radical transparency. Here&apos;s exactly what data we collect, why we
               collect it, and how we keep it safe.
             </p>
             <p className="text-xs text-[#adaaaa]/60 mt-4 border-t border-[#ff5f1f]/10 pt-4">
@@ -129,7 +129,7 @@ export default function PrivacyPage() {
           {/* Footer note */}
           <div className="mt-16 p-6 border border-[#ff5f1f]/20 rounded-xl bg-[#ff5f1f]/5">
             <p className="text-xs text-[#adaaaa] leading-relaxed">
-              We may update this Privacy Policy from time to time. When we do, we'll revise the
+              We may update this Privacy Policy from time to time. When we do, we&apos;ll revise the
               effective date above and notify you by email if the changes are material. Continued
               use of Task Dough after changes constitutes acceptance of the revised policy.
             </p>

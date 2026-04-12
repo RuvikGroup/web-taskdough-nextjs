@@ -147,7 +147,7 @@ export default function TermsPage() {
           <div className="mt-16 p-6 border border-[#ff5f1f]/20 rounded-xl bg-[#ff5f1f]/5">
             <p className="text-xs text-[#adaaaa] leading-relaxed">
               Task Dough reserves the right to modify these Terms at any time. We will provide
-              at least 14 days' notice of material changes via email. Continued use of the
+              at least 14 days&apos; notice of material changes via email. Continued use of the
               platform after the effective date of revised Terms constitutes your acceptance.
             </p>
           </div>
