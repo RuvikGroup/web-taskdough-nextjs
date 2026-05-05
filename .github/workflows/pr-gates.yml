@@ -1,0 +1,58 @@
+name: PR Gates — QA, Design Review, Benchmark
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  pr-gates:
+    name: Fire PR gate routines
+    runs-on: [self-hosted, macmini]
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Detect frontend changes
+        id: detect
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          CHANGED=$(gh api "repos/$REPO/pulls/$PR_NUM/files" --jq '[.[].filename] | join("\n")')
+          if echo "$CHANGED" | grep -qE '(apps/admin-ui/|\.tsx$|\.css$|\.scss$|\.dart$|pubspec\.yaml$)'; then
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "frontend=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: QA gate (qa-only) — frontend PRs only
+        if: steps.detect.outputs.frontend == 'true'
+        env:
+          PAPERCLIP_QA_WEBHOOK_SECRET: ${{ secrets.PAPERCLIP_QA_WEBHOOK_SECRET }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          PAYLOAD=$(jq -n --argjson pr_number "$PR_NUM" --arg sha "$HEAD_SHA" --arg repo "$REPO" '{"pr_number":$pr_number,"sha":$sha,"repo":$repo}')
+          curl -sf -X POST -H "Authorization: Bearer $PAPERCLIP_QA_WEBHOOK_SECRET" -H "Content-Type: application/json" -d "$PAYLOAD" http://192.168.50.60:3100/api/routine-triggers/public/8437a65a761c2e41b6e8d08b/fire
+
+      - name: Design review — frontend PRs only
+        if: steps.detect.outputs.frontend == 'true'
+        env:
+          PAPERCLIP_DESIGN_REVIEW_WEBHOOK_SECRET: ${{ secrets.PAPERCLIP_DESIGN_REVIEW_WEBHOOK_SECRET }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          PAYLOAD=$(jq -n --argjson pr_number "$PR_NUM" --arg sha "$HEAD_SHA" --arg repo "$REPO" '{"pr_number":$pr_number,"sha":$sha,"repo":$repo}')
+          curl -sf -X POST -H "Authorization: Bearer $PAPERCLIP_DESIGN_REVIEW_WEBHOOK_SECRET" -H "Content-Type: application/json" -d "$PAYLOAD" http://192.168.50.60:3100/api/routine-triggers/public/a7dc4d9d281d69b7f23f43b7/fire
+
+      - name: Benchmark — all PRs
+        env:
+          PAPERCLIP_BENCHMARK_WEBHOOK_SECRET: ${{ secrets.PAPERCLIP_BENCHMARK_WEBHOOK_SECRET }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          PAYLOAD=$(jq -n --argjson pr_number "$PR_NUM" --arg sha "$HEAD_SHA" --arg repo "$REPO" '{"pr_number":$pr_number,"sha":$sha,"repo":$repo}')
+          curl -sf -X POST -H "Authorization: Bearer $PAPERCLIP_BENCHMARK_WEBHOOK_SECRET" -H "Content-Type: application/json" -d "$PAYLOAD" http://192.168.50.60:3100/api/routine-triggers/public/732fc5c3f2871828e1cb9c82/fire
