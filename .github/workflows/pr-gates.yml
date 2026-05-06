@@ -5,11 +5,14 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  pr-gates:
-    name: Fire PR gate routines
+
+  detect:
+    name: Detect frontend changes
     runs-on: [self-hosted, macmini]
     permissions:
       pull-requests: read
+    outputs:
+      frontend: ${{ steps.detect.outputs.frontend }}
     steps:
       - name: Detect frontend changes
         id: detect
@@ -19,14 +22,90 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           CHANGED=$(gh api "repos/$REPO/pulls/$PR_NUM/files" --jq '[.[].filename] | join("\n")')
-          if echo "$CHANGED" | grep -qE '(apps/admin-ui/|\.tsx$|\.css$|\.scss$|\.dart$|pubspec\.yaml$)'; then
+          if echo "$CHANGED" | grep -qE '(^app/|^src/|^components/|^pages/|\.tsx$|\.ts$|\.css$|\.scss$)'; then
             echo "frontend=true" >> "$GITHUB_OUTPUT"
           else
             echo "frontend=false" >> "$GITHUB_OUTPUT"
           fi
 
+  qa-gate:
+    name: QA gate — Next.js smoke test
+    needs: detect
+    if: needs.detect.outputs.frontend == 'true'
+    runs-on: [self-hosted, macmini]
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        id: build
+        run: npm run build
+
+      - name: Serve and smoke test
+        id: smoke
+        run: |
+          PORT=$((15374 + RANDOM % 500))
+          npx next start -p "$PORT" &
+          SERVER_PID=$!
+          sleep 5
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/" || echo "000")
+          kill "$SERVER_PID" 2>/dev/null || true
+          echo "http_status=$STATUS" >> "$GITHUB_OUTPUT"
+          [ "$STATUS" = "200" ] && echo "result=pass" >> "$GITHUB_OUTPUT" || echo "result=fail" >> "$GITHUB_OUTPUT"
+
+      - name: Comment QA results on PR
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          SMOKE_RESULT: ${{ steps.smoke.outputs.result }}
+          HTTP_STATUS: ${{ steps.smoke.outputs.http_status }}
+        run: |
+          if [ "$BUILD_OUTCOME" != "success" ]; then
+            BODY="## ❌ QA Gate — Build Failed
+
+The Next.js build failed on this PR. Fix build errors before merging.
+
+**Scope:** \`app/\`, \`src/\`, \`components/\`, \`pages/\`, \`*.tsx\`, styles"
+          elif [ "$SMOKE_RESULT" = "pass" ]; then
+            BODY="## ✅ QA Gate — Passed
+
+| Check | Result |
+|-------|--------|
+| Build | ✅ success |
+| App loads | ✅ HTTP $HTTP_STATUS |
+
+Frontend changes detected and verified on built artifact."
+          else
+            BODY="## ❌ QA Gate — Smoke Test Failed
+
+| Check | Result |
+|-------|--------|
+| Build | ✅ success |
+| App loads | ❌ HTTP $HTTP_STATUS |
+
+The built app did not return HTTP 200."
+          fi
+          gh api "repos/$REPO/issues/$PR_NUM/comments" -X POST -f "body=$BODY"
+
+  webhooks:
+    name: Fire PR gate webhooks
+    needs: detect
+    runs-on: [self-hosted, macmini]
+    permissions:
+      pull-requests: read
+    steps:
       - name: QA gate (qa-only) — frontend PRs only
-        if: steps.detect.outputs.frontend == 'true'
+        if: needs.detect.outputs.frontend == 'true'
         env:
           PAPERCLIP_QA_WEBHOOK_SECRET: ${{ secrets.PAPERCLIP_QA_WEBHOOK_SECRET }}
           PR_NUM: ${{ github.event.pull_request.number }}
@@ -37,7 +116,7 @@ jobs:
           curl -sf -X POST -H "Authorization: Bearer $PAPERCLIP_QA_WEBHOOK_SECRET" -H "Content-Type: application/json" -d "$PAYLOAD" http://192.168.50.60:3100/api/routine-triggers/public/8437a65a761c2e41b6e8d08b/fire
 
       - name: Design review — frontend PRs only
-        if: steps.detect.outputs.frontend == 'true'
+        if: needs.detect.outputs.frontend == 'true'
         env:
           PAPERCLIP_DESIGN_REVIEW_WEBHOOK_SECRET: ${{ secrets.PAPERCLIP_DESIGN_REVIEW_WEBHOOK_SECRET }}
           PR_NUM: ${{ github.event.pull_request.number }}
